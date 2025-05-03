@@ -1,0 +1,34 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  password         String?  // Optionnel pour les utilisateurs OAuth
+  isAdmin          Boolean  @default(false)
+  isSubscribed     Boolean  @default(false)
+  oauthProvider    String?  // Fournisseur OAuth (google, facebook, github)
+  oauthProviderId  String?  // ID du profil chez le fournisseur OAuth
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  quotes           Quote[]
+}
+
+model Quote {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  status      String   @default("pending")
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+} 
