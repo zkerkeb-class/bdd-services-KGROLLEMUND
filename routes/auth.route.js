@@ -110,20 +110,45 @@ router.post('/oauth', async (req, res) => {
       return res.status(400).json({ message: 'Informations OAuth incomplètes' });
     }
     
-    // Rechercher l'utilisateur par email
-    let user = await prisma.user.findUnique({
-      where: { email }
+    // Rechercher TOUS les utilisateurs avec cet email
+    // Note: Normalement l'email est unique, mais on veut vérifier s'il y a des comptes classiques
+    // Nous utilisons findFirst au lieu de findUnique pour éviter les erreurs si plusieurs utilisateurs existent
+    const users = await prisma.user.findMany({
+      where: { 
+        email: {
+          equals: email,
+          mode: 'insensitive' // Ignorer la casse
+        }
+      }
     });
     
-    if (user) {
-      // Mettre à jour les informations OAuth pour un utilisateur existant
+    console.log(`Recherche d'utilisateurs avec l'email ${email}:`, users);
+    
+    // Vérifier s'il existe un compte classique (sans oauthProvider mais avec password)
+    const classicAccount = users.find(u => !u.oauthProvider && u.password);
+    
+    if (classicAccount) {
+      console.log('Compte classique trouvé avec le même email:', classicAccount.id);
+      return res.status(409).json({ 
+        message: 'Cet email est déjà utilisé avec un compte classique. Veuillez vous connecter avec votre mot de passe.'
+      });
+    }
+    
+    // Rechercher un compte OAuth existant avec le même email
+    const existingOAuthAccount = users.find(u => u.oauthProvider);
+    
+    let user;
+    
+    if (existingOAuthAccount) {
+      // Mettre à jour les informations OAuth pour un utilisateur existant avec OAuth
       user = await prisma.user.update({
-        where: { id: user.id },
+        where: { id: existingOAuthAccount.id },
         data: {
           oauthProvider,
           oauthProviderId
         }
       });
+      console.log('Compte OAuth mis à jour:', user.id);
     } else {
       // Créer un nouvel utilisateur OAuth
       user = await prisma.user.create({
@@ -134,6 +159,7 @@ router.post('/oauth', async (req, res) => {
           oauthProviderId
         }
       });
+      console.log('Nouveau compte OAuth créé:', user.id);
     }
     
     // Ne pas renvoyer le mot de passe (s'il existe)

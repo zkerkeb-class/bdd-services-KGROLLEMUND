@@ -8,17 +8,31 @@ generator client {
 }
 
 model User {
-  id               String   @id @default(uuid())
-  name             String
-  email            String   @unique
-  password         String?  // Optionnel pour les utilisateurs OAuth
-  isAdmin          Boolean  @default(false)
-  isSubscribed     Boolean  @default(false)
-  oauthProvider    String?  // Fournisseur OAuth (google, facebook, github)
-  oauthProviderId  String?  // ID du profil chez le fournisseur OAuth
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  quotes           Quote[]
+  id                 String    @id @default(uuid())
+  name               String
+  email              String   
+  phoneNumber        String?   // Numéro de téléphone pour les notifications SMS
+  password           String?   // Optionnel pour les utilisateurs OAuth
+  isAdmin            Boolean   @default(false)
+  isSubscribed       Boolean   @default(false)
+  subscriptionId     String?   // ID de l'abonnement Stripe
+  numSubscriptionId  Int?      // Référence à l'ID auto-increment de la table Subscription
+  subscriptionEndDate DateTime? // Date de fin d'abonnement
+  oauthProvider      String?   // Fournisseur OAuth (google, facebook, github)
+  oauthProviderId    String?   // ID du profil chez le fournisseur OAuth
+  verificationToken  String?   // Token de vérification d'email
+  isVerified         Boolean   @default(false) // Si l'email est vérifié
+  resetToken         String?   // Token de réinitialisation de mot de passe
+  resetTokenExpiry   DateTime? // Date d'expiration du token de réinitialisation
+  resetCode          String?   // Code de réinitialisation pour SMS
+  sector             String?   // Secteur d'activité (développement, marketing, design, etc.)
+  isProfileCompleted Boolean   @default(false) // Si le profil professionnel est complété
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  quotes             Quote[]
+  subscriptions      Subscription[]
+  professionalProfile ProfessionalProfile?
+  quoteRequests      QuoteRequest[]
 }
 
 model Quote {
@@ -31,4 +45,58 @@ model Quote {
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Subscription {
+  id                    Int       @id @default(autoincrement()) // ID auto-increment
+  internalId            String    @default(uuid()) // UUID interne comme identifiant alternatif
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id])
+  planType              String    // Type d'abonnement (basic, premium, etc.)
+  startDate             DateTime  @default(now())
+  endDate               DateTime
+  status                String    @default("active") // active, cancelled, expired
+  stripeSubscriptionId  String?   // ID de l'abonnement Stripe
+  stripeCustomerId      String?   // ID du client Stripe
+  isActive              Boolean   @default(true)
+  autoRenew             Boolean   @default(true)
+  lastPaymentDate       DateTime?
+  nextPaymentDate       DateTime?
+  amount                Float     // Montant de l'abonnement
+  currency              String    @default("EUR")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model ProfessionalProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  sector            String   // Secteur d'activité (développement, marketing, design, etc.)
+  specialties       String[] // Spécialités dans le secteur (dev frontend, SEO, UI design, etc.)
+  yearsOfExperience Int      @default(0)
+  hourlyRate        Float?   // Taux horaire (optionnel)
+  skills            String[] // Compétences techniques
+  bio               String?  // Courte biographie professionnelle
+  certifications    String[] // Certifications professionnelles
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model QuoteRequest {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  title          String
+  description    String
+  documentUrl    String?  // URL vers le document déposé (PDF, PNG, etc.)
+  documentType   String?  // Type de document (PDF, PNG, etc.)
+  aiAnalysis     Json?    // Résultat de l'analyse IA au format JSON
+  features       Json     // Liste des fonctionnalités demandées au format JSON
+  totalEstimate  Float?   // Estimation totale du coût
+  timeEstimate   Int?     // Estimation du temps en heures
+  status         String   @default("pending") // pending, completed, cancelled
+  feedback       String?  // Retour de l'utilisateur sur l'estimation
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 } 

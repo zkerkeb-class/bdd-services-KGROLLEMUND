@@ -1,0 +1,340 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+// Récupérer tous les utilisateurs
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Récupérer un utilisateur par email
+exports.getUserByEmail = async (req, res) => {
+  try {
+    console.log('Recherche d\'utilisateurs par email EXACT:', req.params.email);
+    
+    // Vérifier si l'email est fourni
+    if (!req.params.email) {
+      console.error('Email non fourni dans les paramètres');
+      return res.status(400).json({ error: 'Email parameter is required' });
+    }
+    
+    // Rechercher TOUS les utilisateurs avec cet email EXACT
+    const users = await prisma.user.findMany({
+      where: { 
+        email: req.params.email // Recherche exacte, sensible à la casse
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true, // Inclure le mot de passe pour vérifier les comptes classiques
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        oauthProviderId: true,
+        verificationToken: true, // Ajout du token de vérification
+        isVerified: true,        // Ajout du statut de vérification
+        resetToken: true,        // Ajout du token de réinitialisation
+        resetTokenExpiry: true,  // Ajout de la date d'expiration du token de réinitialisation
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    if (users.length === 0) {
+      console.log('Aucun utilisateur trouvé avec l\'email EXACT:', req.params.email);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`${users.length} utilisateur(s) trouvé(s) avec l'email EXACT:`, req.params.email);
+    
+    // Vérifier si la requête vient du service d'authentification
+    const isAuthService = req.headers['x-service'] === 'auth-service' || 
+                         req.headers.referer?.includes('auth') || 
+                         req.get('origin')?.includes('3001');
+    
+    // Si la requête vient du service d'authentification, renvoyer l'utilisateur complet avec le mot de passe
+    if (isAuthService) {
+      console.log('Requête du service d\'authentification - renvoi de l\'utilisateur complet');
+      // Si un seul utilisateur, renvoyer l'objet directement pour compatibilité
+      if (users.length === 1) {
+        res.json(users[0]);
+      } else {
+        // Sinon renvoyer un tableau
+        res.json(users);
+      }
+    } else {
+      // Pour les autres services, ne pas renvoyer les mots de passe
+      console.log('Requête d\'un autre service - suppression du mot de passe');
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      // Si un seul utilisateur, renvoyer l'objet directement pour compatibilité
+      if (users.length === 1) {
+        res.json(usersWithoutPasswords[0]);
+      } else {
+        // Sinon renvoyer un tableau
+        res.json(usersWithoutPasswords);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching users by email:', error);
+    console.error('Error details:', error.message);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
+
+// Récupérer un utilisateur par ID
+exports.getUserById = async (req, res) => {
+  try {
+    console.log('Recherche d\'utilisateur par ID:', req.params.id);
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        oauthProviderId: true,
+        verificationToken: true, // Ajout du token de vérification
+        isVerified: true,        // Ajout du statut de vérification
+        resetToken: true,        // Ajout du token de réinitialisation
+        resetTokenExpiry: true,  // Ajout de la date d'expiration du token de réinitialisation
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    if (!user) {
+      console.log('Utilisateur non trouvé avec l\'ID:', req.params.id);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('Utilisateur trouvé here2', user);
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    console.error('Error details:', error.message);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
+
+// Créer un utilisateur
+exports.createUser = async (req, res) => {
+  try {
+    const user = await prisma.user.create({
+      data: req.body,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    res.status(201).json(user);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Mettre à jour un utilisateur
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Vérifier que l'utilisateur existe
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+    
+    // Mettre à jour l'utilisateur
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
+
+// Mettre à jour le statut d'abonnement d'un utilisateur
+exports.updateUserSubscription = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { isSubscribed, subscriptionId, subscriptionEndDate } = req.body;
+    
+    // Vérifier que l'email est fourni
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+    
+    // Rechercher l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+    
+    // Préparer les données de mise à jour
+    const updateData = {};
+    
+    if (isSubscribed !== undefined) {
+      updateData.isSubscribed = isSubscribed;
+    }
+    
+    if (subscriptionId !== undefined) {
+      updateData.subscriptionId = subscriptionId;
+    }
+    
+    if (subscriptionEndDate !== undefined) {
+      updateData.subscriptionEndDate = new Date(subscriptionEndDate);
+    }
+    
+    // Mettre à jour l'utilisateur
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+        isSubscribed: true,
+        subscriptionId: true,
+        subscriptionEndDate: true,
+        oauthProvider: true,
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Error updating user subscription:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
+
+// Récupérer un utilisateur par numéro de téléphone
+exports.getUserByPhoneNumber = async (req, res) => {
+  try {
+    console.log('Recherche d\'utilisateur par numéro de téléphone:', req.params.phoneNumber);
+    
+    // Vérifier si le numéro de téléphone est fourni
+    if (!req.params.phoneNumber) {
+      console.error('Numéro de téléphone non fourni dans les paramètres');
+      return res.status(400).json({ error: 'Phone number parameter is required' });
+    }
+    
+    // Rechercher l'utilisateur avec ce numéro de téléphone
+    const user = await prisma.user.findFirst({
+      where: { 
+        phoneNumber: req.params.phoneNumber
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        password: true, // Inclure le mot de passe pour vérifier les comptes classiques
+        isAdmin: true,
+        isSubscribed: true,
+        oauthProvider: true,
+        oauthProviderId: true,
+        verificationToken: true,
+        isVerified: true,
+        resetToken: true,
+        resetCode: true,
+        resetTokenExpiry: true,
+        sector: true,
+        isProfileCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    if (!user) {
+      console.log('Aucun utilisateur trouvé avec le numéro de téléphone:', req.params.phoneNumber);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('Utilisateur trouvé avec le numéro de téléphone:', req.params.phoneNumber);
+    
+    // Vérifier si la requête vient du service d'authentification
+    const isAuthService = req.headers['x-service'] === 'auth-service' || 
+                         req.headers.referer?.includes('auth') || 
+                         req.get('origin')?.includes('3001');
+    
+    // Si la requête vient du service d'authentification, renvoyer l'utilisateur complet avec le mot de passe
+    if (isAuthService) {
+      console.log('Requête du service d\'authentification - renvoi de l\'utilisateur complet');
+      res.json(user);
+    } else {
+      // Pour les autres services, ne pas renvoyer le mot de passe
+      console.log('Requête d\'un autre service - suppression du mot de passe');
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    }
+  } catch (error) {
+    console.error('Error fetching user by phone number:', error);
+    console.error('Error details:', error.message);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+}; 

@@ -5,6 +5,8 @@ const router = express.Router();
 const userRoutes = require('./user.route');
 const quoteRoutes = require('./quote.route');
 const authRoutes = require('./auth.route');
+const subscriptionRoutes = require('./subscription.route'); // Import des routes d'abonnement
+const professionalProfileRoutes = require('./professional-profile.route'); // Import des routes de profil professionnel
 
 // Route de santé
 router.get('/health', (req, res) => {
@@ -15,5 +17,7 @@ router.get('/health', (req, res) => {
 router.use('/users', userRoutes);
 router.use('/quotes', quoteRoutes);
 router.use('/public', authRoutes); // Routes publiques pour l'authentification
+router.use('/subscriptions', subscriptionRoutes); // Routes pour les abonnements
+router.use('/professional-profiles', professionalProfileRoutes); // Routes pour les profils professionnels
 
 module.exports = router; 
