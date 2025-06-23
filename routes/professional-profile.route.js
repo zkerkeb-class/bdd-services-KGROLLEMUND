@@ -12,7 +12,7 @@ router.post('/', checkUserId, professionalProfileController.createProfile);
 router.get('/user/:userId', professionalProfileController.getProfileByUserId);
 
 // Mettre à jour un profil
-router.put('/:userId', checkUserId, professionalProfileController.updateProfile);
+router.put('/user/:userId', professionalProfileController.updateProfile);
 
 // Supprimer un profil
 router.delete('/:userId', checkUserId, professionalProfileController.deleteProfile);

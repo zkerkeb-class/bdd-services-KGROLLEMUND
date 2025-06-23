@@ -75,10 +75,6 @@ model ProfessionalProfile {
   sector            String   // Secteur d'activité (développement, marketing, design, etc.)
   specialties       String[] // Spécialités dans le secteur (dev frontend, SEO, UI design, etc.)
   yearsOfExperience Int      @default(0)
-  hourlyRate        Float?   // Taux horaire (optionnel)
-  skills            String[] // Compétences techniques
-  bio               String?  // Courte biographie professionnelle
-  certifications    String[] // Certifications professionnelles
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

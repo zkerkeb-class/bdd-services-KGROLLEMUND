@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 // Créer un profil professionnel
 exports.createProfile = async (req, res) => {
   try {
-    const { userId, sector, specialties, yearsOfExperience, skills, bio, hourlyRate, certifications } = req.body;
+    const { userId, sector, specialties, yearsOfExperience} = req.body;
+    console.log('📝 Données reçues pour création de profil:', { userId, sector, specialties, yearsOfExperience });
     
     // Vérifier si un profil existe déjà pour cet utilisateur
     const existingProfile = await prisma.professionalProfile.findUnique({
@@ -16,16 +17,19 @@ exports.createProfile = async (req, res) => {
     }
     
     // Créer le profil
+    console.log('📝 Création du profil avec les données:', {
+      userId,
+      sector,
+      specialties: specialties || [],
+      yearsOfExperience: yearsOfExperience || 0
+    });
     const profile = await prisma.professionalProfile.create({
       data: {
         userId,
         sector,
         specialties: specialties || [],
         yearsOfExperience: yearsOfExperience || 0,
-        skills: skills || [],
-        bio: bio || null,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
-        certifications: certifications || []
+
       }
     });
     
@@ -35,6 +39,7 @@ exports.createProfile = async (req, res) => {
       data: { isProfileCompleted: true }
     });
     
+    console.log('✅ Profil créé avec succès:', profile);
     res.status(201).json(profile);
   } catch (error) {
     console.error('Erreur lors de la création du profil professionnel:', error);
@@ -86,7 +91,7 @@ exports.getProfileByUserId = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { sector, specialties, yearsOfExperience, skills, bio, hourlyRate, certifications } = req.body;
+    const { sector, specialties, yearsOfExperience} = req.body;
     
     // Vérifier si le profil existe
     const existingProfile = await prisma.professionalProfile.findUnique({
@@ -103,11 +108,7 @@ exports.updateProfile = async (req, res) => {
       data: {
         sector: sector || existingProfile.sector,
         specialties: specialties || existingProfile.specialties,
-        yearsOfExperience: yearsOfExperience !== undefined ? yearsOfExperience : existingProfile.yearsOfExperience,
-        skills: skills || existingProfile.skills,
-        bio: bio !== undefined ? bio : existingProfile.bio,
-        hourlyRate: hourlyRate !== undefined ? parseFloat(hourlyRate) : existingProfile.hourlyRate,
-        certifications: certifications || existingProfile.certifications
+        yearsOfExperience: yearsOfExperience !== undefined ? yearsOfExperience : existingProfile.yearsOfExperience
       }
     });
     
