@@ -29,22 +29,11 @@ model User {
   isProfileCompleted Boolean   @default(false) // Si le profil professionnel est complété
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
-  quotes             Quote[]
   subscriptions      Subscription[]
   professionalProfile ProfessionalProfile?
   quoteRequests      QuoteRequest[]
-}
-
-model Quote {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  price       Float
-  status      String   @default("pending")
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  quotes             Quote[]
+  analyses           Analysis[]
 }
 
 model Subscription {
@@ -80,19 +69,52 @@ model ProfessionalProfile {
 }
 
 model QuoteRequest {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  title             String
+  description       String
+  documentUrl       String?  // URL vers le document déposé (PDF, PNG, etc.)
+  documentType      String?  // Type de document (PDF, PNG, etc.)
+  aiAnalysis        Json?    // Résultat de l'analyse IA au format JSON
+  tasksEstimation   Json?    // Estimation détaillée par tâche {task: "", cost: 0, timeHours: 0}
+  totalEstimate     Float?   // Estimation totale du coût
+  timeEstimate      Int?     // Estimation du temps en heures
+  status            String   @default("pending") // pending, analysed, completed, cancelled
+  feedback          String?  // Retour de l'utilisateur sur l'estimation
+  clientEmail       String?  // Email du client
+  quotes            Quote[]  // Devis finalisés basés sur cette demande
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Quote {
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id])
+  quoteRequestId    String
+  quoteRequest      QuoteRequest @relation(fields: [quoteRequestId], references: [id])
+  title             String
+  description       String
+  clientEmail       String?      // Email du client final
+  tasksEstimation   Json         // Tâches finalisées avec estimations
+  totalEstimate     Float        // Montant total final
+  timeEstimate      Int          // Temps total estimé en heures
+  status            String       @default("finalized") // finalized, sent, accepted, rejected
+  sentAt            DateTime?    // Date d'envoi au client
+  acceptedAt        DateTime?    // Date d'acceptation par le client
+  pdfUrl            String?      // URL vers le PDF généré
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Analysis {
   id             String   @id @default(uuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id])
-  title          String
-  description    String
-  documentUrl    String?  // URL vers le document déposé (PDF, PNG, etc.)
-  documentType   String?  // Type de document (PDF, PNG, etc.)
-  aiAnalysis     Json?    // Résultat de l'analyse IA au format JSON
-  features       Json     // Liste des fonctionnalités demandées au format JSON
-  totalEstimate  Float?   // Estimation totale du coût
-  timeEstimate   Int?     // Estimation du temps en heures
-  status         String   @default("pending") // pending, completed, cancelled
-  feedback       String?  // Retour de l'utilisateur sur l'estimation
+  fileName       String   // Nom du fichier analysé
+  fileType       String?  // Type MIME du fichier
+  analysisResult Json     // Résultat de l'analyse IA au format JSON
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 } 
