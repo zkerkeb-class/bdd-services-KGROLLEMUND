@@ -24,6 +24,7 @@ router.post('/', async (req, res) => {
     const { 
       quoteRequestId, 
       clientEmail, 
+      clientName,
       updatedTasks, 
       totalEstimate, 
       timeEstimate 
@@ -32,6 +33,7 @@ router.post('/', async (req, res) => {
     console.log('🔍 Validation des données:', {
       quoteRequestId: !!quoteRequestId,
       clientEmail: !!clientEmail,
+      clientName: !!clientName,
       updatedTasks: Array.isArray(updatedTasks) ? updatedTasks.length : 'non-array',
       totalEstimate: typeof totalEstimate,
       timeEstimate: typeof timeEstimate
@@ -62,6 +64,7 @@ router.post('/', async (req, res) => {
       title: quoteRequest.title,
       description: quoteRequest.description,
       clientEmail: clientEmail || null,
+      clientName: clientName || null,
       tasksEstimation: updatedTasks || quoteRequest.tasksEstimation,
       totalEstimate: totalEstimate || quoteRequest.totalEstimate,
       timeEstimate: timeEstimate || quoteRequest.timeEstimate,
@@ -73,6 +76,7 @@ router.post('/', async (req, res) => {
       quoteRequestId: quoteData.quoteRequestId,
       title: quoteData.title,
       clientEmail: quoteData.clientEmail,
+      clientName: quoteData.clientName,
       tasksCount: Array.isArray(quoteData.tasksEstimation) ? quoteData.tasksEstimation.length : 'non-array',
       totalEstimate: quoteData.totalEstimate,
       timeEstimate: quoteData.timeEstimate,

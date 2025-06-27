@@ -83,6 +83,7 @@ model QuoteRequest {
   status            String   @default("pending") // pending, analysed, completed, cancelled
   feedback          String?  // Retour de l'utilisateur sur l'estimation
   clientEmail       String?  // Email du client
+  clientName        String?  // Nom du client ou de l'entreprise
   quotes            Quote[]  // Devis finalisés basés sur cette demande
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -97,6 +98,7 @@ model Quote {
   title             String
   description       String
   clientEmail       String?      // Email du client final
+  clientName        String?      // Nom du client ou de l'entreprise
   tasksEstimation   Json         // Tâches finalisées avec estimations
   totalEstimate     Float        // Montant total final
   timeEstimate      Int          // Temps total estimé en heures
