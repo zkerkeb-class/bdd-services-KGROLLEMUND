@@ -67,9 +67,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Service de base de données opérationnel' });
 });
 
-// Utilisation des routes directement à la racine pour la compatibilité
-app.use('/', routes);
-
 // Utilisation des routes avec le préfixe /api pour la cohérence
 app.use('/api', routes);
 

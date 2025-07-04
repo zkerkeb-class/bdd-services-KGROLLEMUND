@@ -4,7 +4,8 @@ const {
     createSubscription, 
     updateSubscription, 
     getSubscription, 
-    getUserSubscriptions 
+    getUserSubscriptions,
+    getSubscriptionByStripeId
 } = require('../controllers/subscriptionController');
 
 // Route pour créer un abonnement
@@ -18,5 +19,8 @@ router.get('/:id', getSubscription);
 
 // Route pour récupérer les abonnements d'un utilisateur
 router.get('/user/:userId', getUserSubscriptions);
+
+// Route pour récupérer un abonnement par son ID Stripe
+router.get('/stripe/:stripeId', getSubscriptionByStripeId);
 
 module.exports = router; 

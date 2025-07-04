@@ -22,7 +22,7 @@ const createSubscription = async (req, res) => {
             console.log(`✅ BDD - Utilisateur ${userId} trouvé`);
             
             // Vérifier si cet utilisateur a déjà un abonnement (actif ou non)
-            console.log(`�� BDD - Vérification d'un abonnement existant pour l'utilisateur ${userId}`);
+            console.log(`🔍 BDD - Vérification d'un abonnement existant pour l'utilisateur ${userId}`);
             const existingSubscription = await prisma.subscription.findFirst({
                 where: { userId }
             });
@@ -113,24 +113,24 @@ const createSubscription = async (req, res) => {
 
 // Mettre à jour un abonnement
 const updateSubscription = async (req, res) => {
-    console.log(`🚀 BDD - DÉBUT updateSubscription - ID: ${req.params.id}`, JSON.stringify(req.body, null, 2));
+    console.log(`🚀 BDD - DÉBUT updateSubscription - internalId: ${req.params.id}`, JSON.stringify(req.body, null, 2));
     try {
-        const { id } = req.params;
-        console.log(`🔍 BDD - Mise à jour de l'abonnement ${id}`);
+        const { id } = req.params; // id est en fait internalId (UUID)
+        console.log(`🔍 BDD - Mise à jour de l'abonnement via internalId ${id}`);
         
         // Vérifier si l'abonnement existe
-        const existingSubscription = await prisma.subscription.findUnique({
-            where: { id }
+        const existingSubscription = await prisma.subscription.findFirst({
+            where: { internalId: id }
         });
         
         if (!existingSubscription) {
-            console.error(`❌ BDD - ERREUR: Abonnement ${id} non trouvé`);
-            return res.status(404).json({ error: `Abonnement avec l'ID ${id} non trouvé` });
+            console.error(`❌ BDD - ERREUR: Abonnement avec internalId ${id} non trouvé`);
+            return res.status(404).json({ error: `Abonnement avec l'ID interne ${id} non trouvé` });
         }
         
-        console.log(`💾 BDD - Mise à jour de l'abonnement ${id}`);
+        console.log(`💾 BDD - Mise à jour de l'abonnement ${existingSubscription.id}`);
         const subscription = await prisma.subscription.update({
-            where: { id },
+            where: { id: existingSubscription.id }, // La mise à jour se fait sur l'ID numérique
             data: req.body
         });
         console.log(`✅ BDD - Abonnement mis à jour, nouveaux détails:`, JSON.stringify(subscription, null, 2));
@@ -211,9 +211,35 @@ const getUserSubscriptions = async (req, res) => {
     }
 };
 
+// Récupérer un abonnement par ID Stripe
+const getSubscriptionByStripeId = async (req, res) => {
+    console.log(`🚀 BDD - DÉBUT getSubscriptionByStripeId - StripeID: ${req.params.stripeId}`);
+    try {
+        const { stripeId } = req.params;
+        const subscription = await prisma.subscription.findFirst({
+            where: {
+                stripeSubscriptionId: stripeId,
+            },
+        });
+        
+        if (!subscription) {
+            return res.status(404).json({ error: 'Abonnement non trouvé avec cet ID Stripe' });
+        }
+        
+        res.json(subscription);
+    } catch (error) {
+        console.error('❌ BDD - ERREUR lors de la récupération de l\'abonnement par ID Stripe:', error);
+        res.status(500).json({ 
+            error: 'Erreur lors de la récupération de l\'abonnement par ID Stripe',
+            details: error.message
+        });
+    }
+};
+
 module.exports = {
     createSubscription,
     updateSubscription,
     getSubscription,
-    getUserSubscriptions
+    getUserSubscriptions,
+    getSubscriptionByStripeId
 }; 

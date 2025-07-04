@@ -1,6 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const normalizeEmail = (email) => {
+  if (!email) return null;
+  const parts = email.toLowerCase().split('@');
+  if (parts.length !== 2) return email;
+
+  const [local, domain] = parts;
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    return `${local.replace(/\./g, '')}@${domain}`;
+  }
+  return email.toLowerCase();
+};
+
 // Récupérer tous les utilisateurs
 exports.getAllUsers = async (req, res) => {
   try {
@@ -11,7 +23,6 @@ exports.getAllUsers = async (req, res) => {
         email: true,
         isAdmin: true,
         isSubscribed: true,
-        oauthProvider: true,
         sector: true,
         isProfileCompleted: true,
         createdAt: true,
@@ -48,8 +59,6 @@ exports.getUserByEmail = async (req, res) => {
         password: true, // Inclure le mot de passe pour vérifier les comptes classiques
         isAdmin: true,
         isSubscribed: true,
-        oauthProvider: true,
-        oauthProviderId: true,
         verificationToken: true, // Ajout du token de vérification
         isVerified: true,        // Ajout du statut de vérification
         resetToken: true,        // Ajout du token de réinitialisation
@@ -108,32 +117,31 @@ exports.getUserByEmail = async (req, res) => {
 
 // Récupérer un utilisateur par ID
 exports.getUserById = async (req, res) => {
+  const { id } = req.params;
   try {
-    console.log('Recherche d\'utilisateur par ID:', req.params.id);
     const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
+      where: { id: id },
       select: {
         id: true,
         name: true,
         email: true,
         isAdmin: true,
         isSubscribed: true,
-        oauthProvider: true,
-        oauthProviderId: true,
-        verificationToken: true, // Ajout du token de vérification
-        isVerified: true,        // Ajout du statut de vérification
-        resetToken: true,        // Ajout du token de réinitialisation
-        resetTokenExpiry: true,  // Ajout de la date d'expiration du token de réinitialisation
-        sector: true,
+        subscriptionId: true,
         isProfileCompleted: true,
+        isVerified: true,
+        sector: true,
+        accounts: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        verificationToken: true,
+        resetToken: true,
+        resetTokenExpiry: true
       }
     });
     
     if (!user) {
-      console.log('Utilisateur non trouvé avec l\'ID:', req.params.id);
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
     
     console.log('Utilisateur trouvé here2', user);
@@ -148,15 +156,19 @@ exports.getUserById = async (req, res) => {
 // Créer un utilisateur
 exports.createUser = async (req, res) => {
   try {
+    const { email, ...restOfBody } = req.body;
     const user = await prisma.user.create({
-      data: req.body,
+      data: {
+        ...restOfBody,
+        email: email,
+        normalizedEmail: normalizeEmail(email),
+      },
       select: {
         id: true,
         name: true,
         email: true,
         isAdmin: true,
         isSubscribed: true,
-        oauthProvider: true,
         sector: true,
         isProfileCompleted: true,
         createdAt: true,
@@ -195,7 +207,6 @@ exports.updateUser = async (req, res) => {
         email: true,
         isAdmin: true,
         isSubscribed: true,
-        oauthProvider: true,
         sector: true,
         isProfileCompleted: true,
         createdAt: true,
@@ -257,7 +268,6 @@ exports.updateUserSubscription = async (req, res) => {
         isSubscribed: true,
         subscriptionId: true,
         subscriptionEndDate: true,
-        oauthProvider: true,
         sector: true,
         isProfileCompleted: true,
         createdAt: true,

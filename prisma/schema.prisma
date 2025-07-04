@@ -10,15 +10,14 @@ generator client {
 model User {
   id                 String    @id @default(uuid())
   name               String
-  email              String   
+  email              String    @unique // L'email doit être unique
+  normalizedEmail    String?   @unique // Pour la logique de recherche normalisée
   password           String?   // Optionnel pour les utilisateurs OAuth
   isAdmin            Boolean   @default(false)
   isSubscribed       Boolean   @default(false)
   subscriptionId     String?   // ID de l'abonnement Stripe
   numSubscriptionId  Int?      // Référence à l'ID auto-increment de la table Subscription
   subscriptionEndDate DateTime? // Date de fin d'abonnement
-  oauthProvider      String?   // Fournisseur OAuth (google, facebook, github)
-  oauthProviderId    String?   // ID du profil chez le fournisseur OAuth
   verificationToken  String?   // Token de vérification d'email
   isVerified         Boolean   @default(false) // Si l'email est vérifié
   resetToken         String?   // Token de réinitialisation de mot de passe
@@ -28,11 +27,24 @@ model User {
   isProfileCompleted Boolean   @default(false) // Si le profil professionnel est complété
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  
+  accounts           Account[] // Lien vers les comptes de connexion
   subscriptions      Subscription[]
   professionalProfile ProfessionalProfile?
   quoteRequests      QuoteRequest[]
   quotes             Quote[]
   analyses           Analysis[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  provider           String // 'google', 'github', 'linkedin'
+  providerAccountId  String // ID de l'utilisateur chez le fournisseur
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
 }
 
 model Subscription {

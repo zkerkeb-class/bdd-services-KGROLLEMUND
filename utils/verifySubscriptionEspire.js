@@ -7,6 +7,8 @@ const prisma = new PrismaClient();
 const verifySubscriptionEspire = async (req, res) => {
 cron.schedule('0 0 * * *', async () => {
     console.log('🔄 Lancement de la vérification des abonnements expirés...');
+    const axios = require('axios');
+    const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL;
     try {
       const now = new Date();
       
@@ -48,9 +50,6 @@ cron.schedule('0 0 * * *', async () => {
         
         // Envoyer une notification (optionnel)
         try {
-          const axios = require('axios');
-          const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006';
-          
           await axios.post(`${NOTIFICATION_SERVICE_URL}/notifications/subscription-notification`, {
             to: subscription.user.email,
             type: 'expired',
