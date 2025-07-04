@@ -9,8 +9,6 @@ router.get('/', userController.getAllUsers);
 // Important: Cette route doit être avant la route /:id pour éviter les conflits
 router.get('/email/:email', userController.getUserByEmail);
 
-// Route pour obtenir un utilisateur par numéro de téléphone
-router.get('/phone/:phoneNumber', userController.getUserByPhoneNumber);
 
 // Route pour obtenir un utilisateur par ID
 router.get('/:id', userController.getUserById);

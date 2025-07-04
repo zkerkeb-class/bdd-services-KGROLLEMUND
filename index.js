@@ -6,6 +6,9 @@ const { verifySubscriptionEspire } = require('./utils/verifySubscriptionEspire')
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3004;
+// À ajouter dans le fichier principal (index.js) de chaque microservice
+const promBundle = require('express-prom-bundle');
+
 
 // Import des routes
 const routes = require('./routes');
@@ -74,6 +77,23 @@ app.use('/api', routes);
 app.use((err, req, res, next) => {
   console.error('Erreur non gérée:', err);
   res.status(500).json({ error: 'Internal server error', details: err.message });
+});
+
+// Middleware Prometheus pour collecter les métriques HTTP
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  includeStatusCode: true,
+  includeUp: true,
+  customLabels: { project_name: 'bdd-service' }, // Remplacer par le nom du service
+  promClient: { collectDefaultMetrics: {} }
+});
+app.use(metricsMiddleware);
+
+// Route pour exposer les métriques Prometheus
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.end(promBundle.promClient.register.metrics());
 });
 
 verifySubscriptionEspire();
