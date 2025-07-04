@@ -1,0 +1,121 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  name               String
+  email              String   
+  password           String?   // Optionnel pour les utilisateurs OAuth
+  isAdmin            Boolean   @default(false)
+  isSubscribed       Boolean   @default(false)
+  subscriptionId     String?   // ID de l'abonnement Stripe
+  numSubscriptionId  Int?      // Référence à l'ID auto-increment de la table Subscription
+  subscriptionEndDate DateTime? // Date de fin d'abonnement
+  oauthProvider      String?   // Fournisseur OAuth (google, facebook, github)
+  oauthProviderId    String?   // ID du profil chez le fournisseur OAuth
+  verificationToken  String?   // Token de vérification d'email
+  isVerified         Boolean   @default(false) // Si l'email est vérifié
+  resetToken         String?   // Token de réinitialisation de mot de passe
+  resetTokenExpiry   DateTime? // Date d'expiration du token de réinitialisation
+  resetCode          String?   // Code de réinitialisation pour SMS
+  sector             String?   // Secteur d'activité (développement, marketing, design, etc.)
+  isProfileCompleted Boolean   @default(false) // Si le profil professionnel est complété
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  subscriptions      Subscription[]
+  professionalProfile ProfessionalProfile?
+  quoteRequests      QuoteRequest[]
+  quotes             Quote[]
+  analyses           Analysis[]
+}
+
+model Subscription {
+  id                    Int       @id @default(autoincrement()) // ID auto-increment
+  internalId            String    @default(uuid()) // UUID interne comme identifiant alternatif
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id])
+  planType              String    // Type d'abonnement (basic, premium, etc.)
+  startDate             DateTime  @default(now())
+  endDate               DateTime
+  status                String    @default("active") // active, cancelled, expired
+  stripeSubscriptionId  String?   // ID de l'abonnement Stripe
+  stripeCustomerId      String?   // ID du client Stripe
+  isActive              Boolean   @default(true)
+  autoRenew             Boolean   @default(true)
+  lastPaymentDate       DateTime?
+  nextPaymentDate       DateTime?
+  amount                Float     // Montant de l'abonnement
+  currency              String    @default("EUR")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model ProfessionalProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  sector            String   // Secteur d'activité (développement, marketing, design, etc.)
+  specialties       String[] // Spécialités dans le secteur (dev frontend, SEO, UI design, etc.)
+  yearsOfExperience Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model QuoteRequest {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  title             String
+  description       String
+  documentUrl       String?  // URL vers le document déposé (PDF, PNG, etc.)
+  documentType      String?  // Type de document (PDF, PNG, etc.)
+  aiAnalysis        Json?    // Résultat de l'analyse IA au format JSON
+  tasksEstimation   Json?    // Estimation détaillée par tâche {task: "", cost: 0, timeHours: 0}
+  totalEstimate     Float?   // Estimation totale du coût
+  timeEstimate      Int?     // Estimation du temps en heures
+  status            String   @default("pending") // pending, analysed, completed, cancelled
+  feedback          String?  // Retour de l'utilisateur sur l'estimation
+  clientEmail       String?  // Email du client
+  clientName        String?  // Nom du client ou de l'entreprise
+  quotes            Quote[]  // Devis finalisés basés sur cette demande
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Quote {
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id])
+  quoteRequestId    String
+  quoteRequest      QuoteRequest @relation(fields: [quoteRequestId], references: [id])
+  title             String
+  description       String
+  clientEmail       String?      // Email du client final
+  clientName        String?      // Nom du client ou de l'entreprise
+  tasksEstimation   Json         // Tâches finalisées avec estimations
+  totalEstimate     Float        // Montant total final
+  timeEstimate      Int          // Temps total estimé en heures
+  status            String       @default("finalized") // finalized, sent, accepted, rejected
+  sentAt            DateTime?    // Date d'envoi au client
+  acceptedAt        DateTime?    // Date d'acceptation par le client
+  pdfUrl            String?      // URL vers le PDF généré
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Analysis {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  fileName       String   // Nom du fichier analysé
+  fileType       String?  // Type MIME du fichier
+  analysisResult Json     // Résultat de l'analyse IA au format JSON
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+} 
