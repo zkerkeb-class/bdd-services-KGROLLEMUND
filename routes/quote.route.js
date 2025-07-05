@@ -126,4 +126,71 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Route pour obtenir tous les devis d'un utilisateur
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const quotes = await prisma.quote.findMany({
+      where: { userId: userId },
+      orderBy: { createdAt: 'desc' }, // Trier par date de création, le plus récent en premier
+      include: { user: true }
+    });
+    res.json(quotes);
+  } catch (error) {
+    console.error('Error fetching quotes for user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Route pour obtenir les statistiques des devis d'un utilisateur
+router.get('/stats/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // 1. Nombre total de devis
+    const totalQuotes = await prisma.quote.count({
+      where: { userId: userId },
+    });
+
+    // 2. Somme totale gagnée (devis finalisés)
+    const finalizedQuotes = await prisma.quote.findMany({
+      where: {
+        userId: userId,
+        status: 'finalized',
+      },
+    });
+    const totalEarned = finalizedQuotes.reduce((sum, quote) => sum + quote.totalEstimate, 0);
+
+    // 3. Revenu mensuel moyen
+    let monthlyAverage = 0;
+    if (finalizedQuotes.length > 0) {
+      // Trouver la date du premier devis finalisé
+      const firstQuoteDate = finalizedQuotes.reduce((earliest, quote) => 
+        new Date(quote.createdAt) < earliest ? new Date(quote.createdAt) : earliest, 
+        new Date()
+      );
+      
+      const now = new Date();
+      // Calculer le nombre de mois entre aujourd'hui et la date du premier devis
+      const monthsDiff = (now.getFullYear() - firstQuoteDate.getFullYear()) * 12 + (now.getMonth() - firstQuoteDate.getMonth()) + 1;
+      
+      if (monthsDiff > 0) {
+        monthlyAverage = totalEarned / monthsDiff;
+      } else {
+        monthlyAverage = totalEarned; // Si tout est dans le même mois
+      }
+    }
+
+    res.json({
+      totalQuotes,
+      totalEarned,
+      monthlyAverage,
+    });
+
+  } catch (error) {
+    console.error('Error fetching quote stats for user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router; 

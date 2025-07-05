@@ -3,14 +3,15 @@ const prisma = new PrismaClient();
 
 const normalizeEmail = (email) => {
   if (!email) return null;
-  const parts = email.toLowerCase().split('@');
-  if (parts.length !== 2) return email; // Ne pas traiter les emails invalides
+  const lowercasedEmail = email.toLowerCase();
+  const parts = lowercasedEmail.split('@');
+  if (parts.length !== 2) return lowercasedEmail; // Retourne l'email en minuscule si invalide
 
   const [local, domain] = parts;
   if (domain === 'gmail.com' || domain === 'googlemail.com') {
     return `${local.replace(/\./g, '')}@${domain}`;
   }
-  return email;
+  return lowercasedEmail;
 };
 
 const findOrCreateOAuthUser = async (req, res) => {
