@@ -38,79 +38,44 @@ exports.getAllUsers = async (req, res) => {
 
 // Récupérer un utilisateur par email
 exports.getUserByEmail = async (req, res) => {
+  const { email } = req.params;
+  const normalizedEmail = normalizeEmail(email);
+
   try {
-    console.log('Recherche d\'utilisateurs par email EXACT:', req.params.email);
-    
-    // Vérifier si l'email est fourni
-    if (!req.params.email) {
-      console.error('Email non fourni dans les paramètres');
-      return res.status(400).json({ error: 'Email parameter is required' });
-    }
-    
-    // Rechercher TOUS les utilisateurs avec cet email EXACT
-    const users = await prisma.user.findMany({
-      where: { 
-        email: req.params.email // Recherche exacte, sensible à la casse
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { normalizedEmail: normalizedEmail }
+        ]
       },
       select: {
         id: true,
         name: true,
         email: true,
-        password: true, // Inclure le mot de passe pour vérifier les comptes classiques
+        password: true, // Important pour la vérification du mot de passe
         isAdmin: true,
         isSubscribed: true,
-        verificationToken: true, // Ajout du token de vérification
-        isVerified: true,        // Ajout du statut de vérification
-        resetToken: true,        // Ajout du token de réinitialisation
-        resetTokenExpiry: true,  // Ajout de la date d'expiration du token de réinitialisation
-        sector: true,
+        subscriptionId: true,
         isProfileCompleted: true,
+        isVerified: true,
+        sector: true,
+        accounts: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        verificationToken: true,
+        resetToken: true,
+        resetTokenExpiry: true
       }
     });
-    
-    if (users.length === 0) {
-      console.log('Aucun utilisateur trouvé avec l\'email EXACT:', req.params.email);
-      return res.status(404).json({ error: 'User not found' });
+
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    
-    console.log(`${users.length} utilisateur(s) trouvé(s) avec l'email EXACT:`, req.params.email);
-    
-    // Vérifier si la requête vient du service d'authentification
-    const isAuthService = req.headers['x-service'] === 'auth-service' || 
-                         req.headers.referer?.includes('auth') || 
-                         req.get('origin')?.includes('3001');
-    
-    // Si la requête vient du service d'authentification, renvoyer l'utilisateur complet avec le mot de passe
-    if (isAuthService) {
-      console.log('Requête du service d\'authentification - renvoi de l\'utilisateur complet');
-      // Si un seul utilisateur, renvoyer l'objet directement pour compatibilité
-      if (users.length === 1) {
-        res.json(users[0]);
-      } else {
-        // Sinon renvoyer un tableau
-        res.json(users);
-      }
-    } else {
-      // Pour les autres services, ne pas renvoyer les mots de passe
-      console.log('Requête d\'un autre service - suppression du mot de passe');
-      const usersWithoutPasswords = users.map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
-      
-      // Si un seul utilisateur, renvoyer l'objet directement pour compatibilité
-      if (users.length === 1) {
-        res.json(usersWithoutPasswords[0]);
-      } else {
-        // Sinon renvoyer un tableau
-        res.json(usersWithoutPasswords);
-      }
-    }
+
+    res.json(user);
   } catch (error) {
-    console.error('Error fetching users by email:', error);
-    console.error('Error details:', error.message);
+    console.error(`Error fetching user by email ${email}:`, error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 };
@@ -128,6 +93,7 @@ exports.getUserById = async (req, res) => {
         isAdmin: true,
         isSubscribed: true,
         subscriptionId: true,
+        subscriptionEndDate: true, // Ajouter ce champ
         isProfileCompleted: true,
         isVerified: true,
         sector: true,
@@ -144,7 +110,6 @@ exports.getUserById = async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
     
-    console.log('Utilisateur trouvé here2', user);
     res.json(user);
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -224,17 +189,17 @@ exports.updateUser = async (req, res) => {
 // Mettre à jour le statut d'abonnement d'un utilisateur
 exports.updateUserSubscription = async (req, res) => {
   try {
-    const { email } = req.params;
+    const { id } = req.params;
     const { isSubscribed, subscriptionId, subscriptionEndDate } = req.body;
     
-    // Vérifier que l'email est fourni
-    if (!email) {
-      return res.status(400).json({ error: 'Email requis' });
+    // Vérifier que l'id est fourni
+    if (!id) {
+      return res.status(400).json({ error: 'ID utilisateur requis' });
     }
     
     // Rechercher l'utilisateur
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { id }
     });
     
     if (!user) {
@@ -251,33 +216,78 @@ exports.updateUserSubscription = async (req, res) => {
     if (subscriptionId !== undefined) {
       updateData.subscriptionId = subscriptionId;
     }
-    
+
     if (subscriptionEndDate !== undefined) {
-      updateData.subscriptionEndDate = new Date(subscriptionEndDate);
+        updateData.subscriptionEndDate = subscriptionEndDate;
     }
     
     // Mettre à jour l'utilisateur
     const updatedUser = await prisma.user.update({
-      where: { email },
+      where: { id },
       data: updateData,
       select: {
         id: true,
         name: true,
         email: true,
-        isAdmin: true,
         isSubscribed: true,
         subscriptionId: true,
-        subscriptionEndDate: true,
-        sector: true,
-        isProfileCompleted: true,
-        createdAt: true,
-        updatedAt: true
+        subscriptionEndDate: true
       }
     });
     
     res.json(updatedUser);
   } catch (error) {
-    console.error('Error updating user subscription:', error);
+    console.error('Error updating subscription status:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
+
+// Mettre à jour le statut d'abonnement d'un utilisateur par email
+exports.updateUserSubscriptionByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { isSubscribed, subscriptionEndDate } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email utilisateur requis' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { normalizedEmail: normalizedEmail }
+        ]
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    const updateData = {};
+    if (isSubscribed !== undefined) {
+      updateData.isSubscribed = isSubscribed;
+    }
+    if (subscriptionEndDate !== undefined) {
+      updateData.subscriptionEndDate = subscriptionEndDate;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        isSubscribed: true,
+        subscriptionEndDate: true
+      }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Error updating subscription status by email:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 };

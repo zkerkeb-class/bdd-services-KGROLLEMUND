@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 // Route pour créer un devis final à partir d'une demande de devis
 router.post('/', async (req, res) => {
   try {
-    console.log('📄 Réception demande de création de devis:', req.body);
+    console.log('📄 Réception demande de création de devis');
     
     const { 
       quoteRequestId, 
@@ -29,15 +29,6 @@ router.post('/', async (req, res) => {
       totalEstimate, 
       timeEstimate 
     } = req.body;
-
-    console.log('🔍 Validation des données:', {
-      quoteRequestId: !!quoteRequestId,
-      clientEmail: !!clientEmail,
-      clientName: !!clientName,
-      updatedTasks: Array.isArray(updatedTasks) ? updatedTasks.length : 'non-array',
-      totalEstimate: typeof totalEstimate,
-      timeEstimate: typeof timeEstimate
-    });
 
     // Récupérer la demande de devis
     const quoteRequest = await prisma.quoteRequest.findUnique({
@@ -49,13 +40,6 @@ router.post('/', async (req, res) => {
       console.error('❌ QuoteRequest non trouvé avec ID:', quoteRequestId);
       return res.status(404).json({ error: 'Quote request not found' });
     }
-
-    console.log('✅ QuoteRequest trouvé:', {
-      id: quoteRequest.id,
-      userId: quoteRequest.userId,
-      title: quoteRequest.title,
-      userEmail: quoteRequest.user?.email
-    });
 
     // Créer le devis final
     const quoteData = {
@@ -71,24 +55,13 @@ router.post('/', async (req, res) => {
       status: 'finalized'
     };
     
-    console.log('📊 Données pour création Quote:', {
-      userId: quoteData.userId,
-      quoteRequestId: quoteData.quoteRequestId,
-      title: quoteData.title,
-      clientEmail: quoteData.clientEmail,
-      clientName: quoteData.clientName,
-      tasksCount: Array.isArray(quoteData.tasksEstimation) ? quoteData.tasksEstimation.length : 'non-array',
-      totalEstimate: quoteData.totalEstimate,
-      timeEstimate: quoteData.timeEstimate,
-      status: quoteData.status
-    });
     
     const quote = await prisma.quote.create({
       data: quoteData,
       include: { user: true }
     });
     
-    console.log('✅ Devis créé:', quote.id);
+    console.log('✅ Devis créé');
 
     // Mettre à jour le statut de la demande de devis
     await prisma.quoteRequest.update({

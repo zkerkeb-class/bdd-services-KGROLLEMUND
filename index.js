@@ -29,19 +29,15 @@ app.use((req, res, next) => {
   const method = req.method;
   const url = req.url;
   const contentType = req.headers['content-type'] || '';
-  
-  console.log(`[${timestamp}] ${method} ${url} - Content-Type: ${contentType}`);
-  
+    
   // Pour les requêtes POST, afficher aussi le corps (sauf pour les uploads binaires)
   if (method === 'POST' && contentType.includes('application/json')) {
-    console.log('Request Body:', req.body);
   }
   
   // Journaliser la fin de la requête et son statut
   const originalEnd = res.end;
   res.end = function(...args) {
     const responseTimestamp = new Date().toISOString();
-    console.log(`[${responseTimestamp}] Response ${res.statusCode} for ${method} ${url}`);
     return originalEnd.apply(this, args);
   };
   
@@ -55,7 +51,6 @@ async function testDatabaseConnection() {
     console.log('✅ Successfully connected to the database');
     // Test une requête simple
     const userCount = await prisma.user.count();
-    console.log(`📊 Current number of users in database: ${userCount}`);
   } catch (error) {
     console.error('❌ Database connection error:', error);
     process.exit(1);

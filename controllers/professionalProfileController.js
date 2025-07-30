@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 exports.createProfile = async (req, res) => {
   try {
     const { userId, sector, specialties, yearsOfExperience} = req.body;
-    console.log('📝 Données reçues pour création de profil:', { userId, sector, specialties, yearsOfExperience });
+    console.log('📝 Données reçues pour création de profil');
     
     // Vérifier si un profil existe déjà pour cet utilisateur
     const existingProfile = await prisma.professionalProfile.findUnique({
@@ -16,13 +16,6 @@ exports.createProfile = async (req, res) => {
       return res.status(409).json({ message: 'Un profil existe déjà pour cet utilisateur' });
     }
     
-    // Créer le profil
-    console.log('📝 Création du profil avec les données:', {
-      userId,
-      sector,
-      specialties: specialties || [],
-      yearsOfExperience: yearsOfExperience || 0
-    });
     const profile = await prisma.professionalProfile.create({
       data: {
         userId,
@@ -39,7 +32,7 @@ exports.createProfile = async (req, res) => {
       data: { isProfileCompleted: true }
     });
     
-    console.log('✅ Profil créé avec succès:', profile);
+    console.log('✅ Profil créé avec succès');
     res.status(201).json(profile);
   } catch (error) {
     console.error('Erreur lors de la création du profil professionnel:', error);
@@ -51,7 +44,7 @@ exports.createProfile = async (req, res) => {
 exports.getProfileByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(`🔍 Recherche du profil professionnel pour l'utilisateur: ${userId}`);
+    console.log(`🔍 Recherche du profil professionnel pour l'utilisateur`);
     
     if (!userId) {
       console.log('❌ ID utilisateur manquant dans les paramètres');
@@ -64,22 +57,22 @@ exports.getProfileByUserId = async (req, res) => {
     });
     
     if (!user) {
-      console.log(`❌ Utilisateur ${userId} non trouvé dans la base de données`);
+      console.log(`❌ Utilisateur non trouvé dans la base de données`);
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
     
-    console.log(`✅ Utilisateur ${userId} trouvé, recherche de son profil professionnel`);
+    console.log(`✅ Utilisateur trouvé, recherche de son profil professionnel`);
     
     const profile = await prisma.professionalProfile.findUnique({
       where: { userId }
     });
     
     if (!profile) {
-      console.log(`❌ Profil professionnel non trouvé pour l'utilisateur ${userId}`);
+      console.log(`❌ Profil professionnel non trouvé pour l'utilisateur `);
       return res.status(404).json({ message: 'Profil non trouvé' });
     }
     
-    console.log(`✅ Profil professionnel trouvé pour l'utilisateur ${userId}:`, profile);
+    console.log(`✅ Profil professionnel trouvé pour l'utilisateur`);
     res.json(profile);
   } catch (error) {
     console.error('❌ Erreur lors de la récupération du profil:', error);

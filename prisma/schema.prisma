@@ -56,7 +56,7 @@ model Subscription {
   startDate             DateTime  @default(now())
   endDate               DateTime
   status                String    @default("active") // active, cancelled, expired
-  stripeSubscriptionId  String?   // ID de l'abonnement Stripe
+  stripeSubscriptionId  String?   @unique // ID de l'abonnement Stripe
   stripeCustomerId      String?   // ID du client Stripe
   isActive              Boolean   @default(true)
   autoRenew             Boolean   @default(true)

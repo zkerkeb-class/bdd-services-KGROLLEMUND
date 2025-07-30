@@ -5,11 +5,15 @@ const {
     updateSubscription, 
     getSubscription, 
     getUserSubscriptions,
-    getSubscriptionByStripeId
+    getSubscriptionByStripeId,
+    updateSubscriptionByStripeId
 } = require('../controllers/subscriptionController');
 
 // Route pour créer un abonnement
 router.post('/', createSubscription);
+
+// Nouvelle route pour mettre à jour un abonnement via son ID Stripe
+router.put('/stripe/:stripeId', updateSubscriptionByStripeId);
 
 // Route pour mettre à jour un abonnement
 router.patch('/:id', updateSubscription);
